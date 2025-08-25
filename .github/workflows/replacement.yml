@@ -1,0 +1,84 @@
+name: Replace-Organisation-Name
+
+# Only run this when the main branch changes or when triggered manually
+on:
+  push:
+    branches:
+      - main
+      # - shipping-workflow
+  workflow_dispatch:
+
+# This job replaces the organisation name in Markdown files and Jupyter Notebooks and pushes the changes back to the main branch
+jobs:
+  replace-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository
+      - uses: actions/checkout@v2
+
+      # Determine the organization and perform the replacement
+      # Replace "neuefische" or "spiced-academy" based on the organization in all *.md and *.ipynb files
+      - name: Replace Organisation Name
+        run: |
+            if [[ "$GITHUB_REPOSITORY" == "neuefische/${GITHUB_REPOSITORY##*/}" ]]; then
+                echo "Replacing 'spiced-academy' with 'neuefische' in Markdown and Jupyter Notebook files"
+                # Replace in *.md files
+                find . -type f \( -name "*.md" -o -name "*.ipynb" \) -exec sed -i 's/spiced-academy/neuefische/g' {} +
+                # Replace version number in *.md and *.ipynb files
+                find . -type f \( -name "*.md" -o -name "*.ipynb" \) -exec sed -i 's/3.11.3/3.12.7/g' {} +
+            elif [[ "$GITHUB_REPOSITORY" == "spiced-academy/${GITHUB_REPOSITORY##*/}" ]]; then
+                echo "Replacing 'neuefische' with 'spiced-academy' in Markdown and Jupyter Notebook files"
+                # Replace in *.md files
+                find . -type f \( -name "*.md" -o -name "*.ipynb" \) -exec sed -i 's/neuefische/spiced-academy/g' {} +
+                # Replace version number in *.md and *.ipynb files
+                find . -type f \( -name "*.md" -o -name "*.ipynb" \) -exec sed -i 's/3.11.3/3.12.7/g' {} +
+            else
+                echo "Repository does not belong to either organization."
+                exit 1
+            fi
+
+      # Commit and push the changes back to the main branch
+    #   - name: Commit and Push Changes
+    #     run: |
+    #       git config --global user.name "github-actions[bot]"
+    #       git config --global user.email "github-actions[bot]@users.noreply.github.com"
+    #       git add .
+    #       git commit -m "Replace 'neuefische' with 'spiced-academy' in all Markdown and Jupyter Notebook files"
+    #       git push origin main
+
+      # Create a new branch, commit, and push the changes
+      - name: Commit and Push Changes to New Branch
+        run: |
+          # Configure Git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Check for changes before creating a new branch
+          if [[ -n $(git status --porcelain) ]]; then
+
+            # Delete the branch if it already exists
+            git branch -D replace-organisation-name || echo "Branch 'replace-organisation-name' does not exist."
+
+            # Create a new branch
+            git checkout -b replace-organisation-name
+            
+            # Stage and commit the changes
+            git add .
+            git commit -m "Replace organization names in Markdown and Jupyter Notebook files"
+            
+            # Push the new branch to the repository
+            git push --force origin replace-organisation-name
+          else
+            echo "No changes to commit, skipping branch creation and push."
+            exit 0  # Exit if there are no changes
+          fi
+
+      # Optionally, create a pull request
+      # - name: Create Pull Request
+      #   if: success() && github.ref == 'refs/heads/replace-organisation-name'  # Only create PR if on new branch
+      #   uses: peter-evans/create-pull-request@v3
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     branch: replace-organisation-name
+      #     title: "Replace organization names in Markdown and Jupyter Notebook files"
+      #     body: "This PR updates organization names in Markdown and Jupyter Notebook files based on the current organization."

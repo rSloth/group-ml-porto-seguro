@@ -1,0 +1,61 @@
+name: Notify Discord on GitHub Events
+
+on:
+  push:
+  pull_request:
+  issues:
+  issue_comment:
+  release:
+
+jobs:
+  notify-discord:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Webhook to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          EVENT_TYPE="${{ github.event_name }}"
+          ACTOR="${{ github.actor }}"
+          REPO="${{ github.repository }}"
+          URL="https://github.com/${REPO}"
+
+          case "$EVENT_TYPE" in
+            push)
+              EVENT_NAME="📦 Push Event"
+              COMMIT_MSG="${{ github.event.head_commit.message }}"
+              CONTENT="**${EVENT_NAME}**\n👤 By: **${ACTOR}**\n📁 Repo: \`${REPO}\`\n📝 Message: _${COMMIT_MSG}_\n🔗 [View Repository](${URL})"
+              ;;
+            pull_request)
+              PR_TITLE="${{ github.event.pull_request.title }}"
+              PR_URL="${{ github.event.pull_request.html_url }}"
+              EVENT_NAME="🔀 Pull Request"
+              CONTENT="**${EVENT_NAME}**\n👤 By: **${ACTOR}**\n📁 Repo: \`${REPO}\`\n📝 PR Title: _${PR_TITLE}_\n🔗 [View Pull Request](${PR_URL})"
+              ;;
+            issues)
+              ISSUE_TITLE="${{ github.event.issue.title }}"
+              ISSUE_URL="${{ github.event.issue.html_url }}"
+              EVENT_NAME="🐞 Issue"
+              CONTENT="**${EVENT_NAME}**\n👤 By: **${ACTOR}**\n📁 Repo: \`${REPO}\`\n📝 Issue: _${ISSUE_TITLE}_\n🔗 [View Issue](${ISSUE_URL})"
+              ;;
+            issue_comment)
+              COMMENT_BODY="${{ github.event.comment.body }}"
+              COMMENT_URL="${{ github.event.comment.html_url }}"
+              EVENT_NAME="💬 Issue Comment"
+              CONTENT="**${EVENT_NAME}**\n👤 By: **${ACTOR}**\n📁 Repo: \`${REPO}\`\n💭 Comment: _${COMMENT_BODY}_\n🔗 [View Comment](${COMMENT_URL})"
+              ;;
+            release)
+              RELEASE_NAME="${{ github.event.release.name }}"
+              RELEASE_URL="${{ github.event.release.html_url }}"
+              EVENT_NAME="🚀 Release Published"
+              CONTENT="**${EVENT_NAME}**\n👤 By: **${ACTOR}**\n📁 Repo: \`${REPO}\`\n🏷️ Release: _${RELEASE_NAME}_\n🔗 [View Release](${RELEASE_URL})"
+              ;;
+            *)
+              CONTENT="📌 Unknown event: ${EVENT_TYPE}"
+              ;;
+          esac
+
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"$CONTENT\"}" \
+               $DISCORD_WEBHOOK

@@ -33,6 +33,7 @@ Flask==3.1.2
 fonttools==4.59.1
 fqdn==1.5.1
 frozenlist==1.7.0
+graphviz==0.21
 idna==3.10
 imbalanced-learn==0.8.1
 imblearn==0.0
